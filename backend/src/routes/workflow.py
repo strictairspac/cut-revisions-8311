@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 
 from src.config.settings import cache, engine
-from src.controllers.workflow import download
-from src.models.tables import audit, cases, evidence, runs
+from src.controllers.workflow import download, download_handover
+from src.models.tables import audit, cases, evidence, handovers, runs
 from src.schemas.workflow import CaseForm, LoginForm, ReviewForm
-from src.services import domain, workflow
+from src.services import domain, handover, workflow
 from src.services.security import current_user, login, operator, reviewer
 
 router = APIRouter()
@@ -67,3 +67,28 @@ def review_evidence(identity: int, form: ReviewForm, actor=Depends(reviewer)):
 @router.get('/audit')
 def list_audit(_=Depends(current_user)):
     return workflow.recent(audit)
+
+
+@router.post('/handovers', status_code=201)
+def create_handover(actor=Depends(operator)):
+    return handover.open_sheet(actor)
+
+
+@router.get('/handovers')
+def list_handovers(_=Depends(current_user)):
+    return workflow.recent(handovers)
+
+
+@router.get('/handovers/{identity}')
+def handover_detail(identity: int, _=Depends(current_user)):
+    return handover.detail(identity)
+
+
+@router.get('/handovers/{identity}/pages/{section}')
+def handover_page(identity: int, section: str, page: int = 1, _=Depends(current_user)):
+    return handover.page(identity, section, page)
+
+
+@router.get('/handovers/{identity}/download')
+def export_handover(identity: int, _=Depends(current_user)):
+    return download_handover(identity)

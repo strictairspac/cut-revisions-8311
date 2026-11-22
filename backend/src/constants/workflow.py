@@ -12,3 +12,8 @@ class Status(StrEnum):
     RUNNING = 'running'
     COMPLETE = 'complete'
     FAILED = 'failed'
+
+
+class SheetStatus(StrEnum):
+    BUILDING = 'building'
+    READY = 'ready'

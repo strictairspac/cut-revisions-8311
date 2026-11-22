@@ -7,6 +7,7 @@ import {casesPage} from './pages/cases.js';
 import {bindEditor, editorPage} from './pages/editor.js';
 import {runsPage} from './pages/runs.js';
 import {bindEvidence, evidencePage} from './pages/evidence.js';
+import {bindHandover, handoversPage} from './pages/handovers.js';
 import {go, route} from './router/hash.js';
 import {submit} from './hooks/submit.js';
 import {esc} from './utils/dom.js';
@@ -21,7 +22,7 @@ function fail(error) {
   if (message) { message.textContent=error.message; message.className='error'; }
 }
 const api = (path, options={})=>request(path, {...options, token:state.session?.token});
-const pages = {cases:casesPage, editor:editorPage, runs:runsPage, evidence:evidencePage};
+const pages = {cases:casesPage, editor:editorPage, runs:runsPage, evidence:evidencePage, handovers:handoversPage};
 async function refresh() {
   clearTimeout(timer);
   const key = ++revision;
@@ -34,12 +35,17 @@ async function refresh() {
     }, fail);
     return;
   }
-  const {key: page,id} = route();
+  const {key: page,id,query} = route();
   if (!pages[page]) { go('cases'); return; }
   try {
-    const result = await Promise.all([state.spec || api('/spec'),api('/cases'),api('/runs'),api('/evidence'),api('/audit')]);
+    const result = await Promise.all([state.spec || api('/spec'),api('/cases'),api('/runs'),api('/evidence'),api('/audit'),api('/handovers')]);
     if (revision !== key) return;
-    [state.spec,state.cases,state.runs,state.evidence,state.audit]=result;
+    [state.spec,state.cases,state.runs,state.evidence,state.audit,state.handovers]=result;
+    if (page==='handovers' && id) {
+      const section = ['cases','runs','evidence'].includes(query.get('section')) ? query.get('section') : 'cases';
+      state.sheetPage = await api(`/handovers/${id}/pages/${section}?page=${Math.max(Number(query.get('page'))||1,1)}`);
+      if (revision !== key) return;
+    } else state.sheetPage = null;
   } catch (error) {
     if (revision !== key) return;
     if (!document.getElementById('message')) app.innerHTML='<main><div id="message" role="alert"></div><button id="retry">重试</button></main>';
@@ -54,6 +60,7 @@ async function refresh() {
   document.getElementById('logout').addEventListener('click',()=>{setSession(null); void refresh();});
   if (page==='editor') bindEditor(state, api, fail);
   if (page==='evidence') bindEvidence(api, refresh, fail);
+  if (page==='handovers') bindHandover(api, fail);
   if (page==='runs') {
     document.getElementById('refresh').addEventListener('click', refresh);
     if (state.runs.some(row=>['queued','running'].includes(row.status))) timer=setTimeout(refresh,1000);

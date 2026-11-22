@@ -1,5 +1,5 @@
-from sqlalchemy import (JSON, Column, ForeignKey, Integer, MetaData, String,
-                        Table, Text)
+from sqlalchemy import (JSON, Column, ForeignKey, Index, Integer, MetaData,
+                        String, Table, Text)
 
 schema = MetaData()
 users = Table('accounts', schema,
@@ -38,3 +38,19 @@ audit = Table('audit_events', schema,
     Column('action', String(32), nullable=False),
     Column('reference', String(50), nullable=False),
     Column('created_at', String(32), nullable=False))
+handovers = Table('handover_sheets', schema,
+    Column('id', Integer, primary_key=True),
+    Column('status', String(20), nullable=False, index=True),
+    Column('snapshot_id', String(40), nullable=False),
+    Column('counts', JSON, nullable=False),
+    Column('digest', String(64), nullable=False),
+    Column('created_by', String(40), nullable=False),
+    Column('created_at', String(32), nullable=False),
+    Column('finished_at', String(32)))
+handover_items = Table('handover_items', schema,
+    Column('id', Integer, primary_key=True),
+    Column('sheet_id', ForeignKey('handover_sheets.id'), nullable=False, index=True),
+    Column('section', String(20), nullable=False),
+    Column('ref', Integer, nullable=False),
+    Column('payload', JSON, nullable=False),
+    Index('ix_handover_items_sheet_section', 'sheet_id', 'section'))

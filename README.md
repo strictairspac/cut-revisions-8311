@@ -8,6 +8,7 @@
 - 并行修订
 - 合并会审
 - 冲突交接
+- 交班单
 
 ## 本地运行
 
@@ -20,6 +21,7 @@ docker compose up -d --build --wait
 - FastAPI 文档 `http://127.0.0.1:19292/docs`
 - PostgreSQL 16 端口 `127.0.0.1:17792`，账号 `app`，演示库 `workflow`
 - `docker compose exec -T backend python -m scripts.seed_demo` 手动重跑演示数据
+- `docker compose exec -T backend sh -c 'VERIFY_API=http://127.0.0.1:8000 VERIFY_DB="postgresql://app:$DB_PASSWORD@db:5432/workflow" python -m scripts.verify_handover'` 校验交班单快照语义
 - `docker compose logs -f backend worker` 查看运行情况
 - `docker compose down` 停容器并保留演示卷
 
@@ -29,9 +31,11 @@ docker compose up -d --build --wait
 
 | 账号 | 角色 | 能执行的操作 |
 |---|---|---|
-| `operator` | 经办员 | 读取档案、创建实验输入、提交执行、导出结果 |
+| `operator` | 经办员 | 读取档案、创建实验输入、提交执行、导出结果、开立交班单 |
 | `reviewer` | 复核员 | 读取、导出和签署结果 |
 | `viewer` | 观察员 | 读取、导出已有结果 |
+
+交班单由经办员点开，三种角色均可逐页翻阅与整份下载。开单那一刻已入库的档案、执行进度和签署意见按同一数据库快照留进单里；开单后才提交入库的记录（包括先领到编号的晚到记录）不在本单，另开一份才能查到。交班单生成完整才可打开，逐页所见与整份下载出自同一份留档内容，页面展示的校验码可与下载文件对验。
 
 `SEED_DEMO=true` 启动时生成账号与一个业务样例。工作台新建档案会预填样例。可编辑表单中的数值、文本和结构化 JSON 后提交。业务说明中的原始文件是上游示例，演示数据通过表单录入。角色枚举位于后端 `src/constants/workflow.py` 与前端 `src/constants/workflow.js`。执行状态枚举也位于这两个文件，使用于队列、列表和执行详情。证据校验码是报告 JSON 按 UTF-8、键排序且省略多余空格序列化后的 SHA-256。
 
